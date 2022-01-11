@@ -1,8 +1,8 @@
 use clap::{AppSettings, Parser, Subcommand};
 use log::{debug, error, info, log_enabled, warn, Level};
 use serialport;
-use ureq::serde_json;
 use std::{io::Read, time::Duration};
+use ureq::serde_json;
 mod serial;
 mod utils;
 use env_logger::{Builder, Target};
@@ -33,7 +33,7 @@ struct Config {
 impl Default for Config {
     fn default() -> Config {
         Config {
-            url: "https://localhost:8080".into(),
+            url: "http://localhost:8080".into(),
             // a dummy JWT token required by ChirpStack API
             token: "".into(),
             id: "2".into(),
@@ -76,10 +76,33 @@ enum Commands {
     },
 }
 
+struct LoraDevice {
+    devEUI: String,
+    appKey: String,
+    applicationID: String,
+    description: String,
+    deviceProfileID: String,
+    isDisabled: bool,
+    skipFCntCheck: bool,
+    name: String,
+    referenceAltitude: i32,
+}
+
 #[derive(Subcommand)]
 enum ApiCommands {
     /// Post a device to ChirpStack API
-    Post,
+    Post {
+        /// The device name
+        #[clap(short, long, default_value = "")]
+        name: String,
+        /// The device description
+        #[clap(short, long, default_value = "a test device")]
+        description: String,
+        #[clap(long, default_value = "")]
+        dev_eui: String,
+        #[clap(long, default_value = "")]
+        app_key: String,
+    },
     /// Get a device list from ChirpStack API
     Get,
 }
@@ -177,27 +200,28 @@ fn main() {
         Commands::Api { command } => {
             if cfg.url.trim().is_empty() {
                 let file = confy::get_configuration_file_path(app_name, None).unwrap();
-                error!("The url is invalid. Please check the configuration file path at: {:#?}", file);
+                error!(
+                    "The url is invalid. Please check the configuration file path at: {:#?}",
+                    file
+                );
                 panic!("The url token is invalid.");
             }
             if cfg.token.trim().is_empty() {
                 let file = confy::get_configuration_file_path(app_name, None).unwrap();
-                error!("The JWT token is invalid. Please check the configuration file path at: {:#?}", file);
+                error!(
+                    "The JWT token is invalid. Please check the configuration file path at: {:#?}",
+                    file
+                );
                 panic!("The JWT token is invalid.");
             }
             match command {
-                ApiCommands::Post => {
-                    // let client = Client::new(&cfg.url, &cfg.token, &cfg.id).unwrap();
-                    // let device_profile_id = cfg.device_profile_id.clone();
-                    // let dev_eui = utils::gen_hex::get_rand_dev_eui();
-                    // let app_key = utils::gen_hex::get_rand_app_key();
-                    // let device = Device {
-                    //     dev_eui: dev_eui.clone(),
-                    //     app_key: app_key.clone(),
-                    //     device_profile_id: device_profile_id.clone(),
-                    // };
-                    // let res = client.post_device(&device);
-                    // info!("{:#?}", res);
+                ApiCommands::Post {
+                    name,
+                    description,
+                    dev_eui,
+                    app_key,
+                } => {
+                    // fill the logic here
                 }
                 ApiCommands::Get => {
                     let msg = get_device(&cfg).expect("Failed to get device");
@@ -209,7 +233,7 @@ fn main() {
 }
 
 fn get_device(cfg: &Config) -> Result<serde_json::Value, ureq::Error> {
-    let msg:serde_json::Value = ureq::get(&format!("{}/devices", cfg.url))
+    let msg: serde_json::Value = ureq::get(&format!("{}/devices", cfg.url))
         .set("Authorization", &format!("Bearer {}", cfg.token))
         .call()?
         .into_json()?;
