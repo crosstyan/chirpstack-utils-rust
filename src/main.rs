@@ -1,12 +1,13 @@
 use clap::{AppSettings, Parser, Subcommand};
 use log::{debug, error, info, log_enabled, warn, Level};
 use serialport;
-use std::{time::Duration, io::Read};
+use ureq::serde_json;
+use std::{io::Read, time::Duration};
 mod serial;
 mod utils;
 use env_logger::{Builder, Target};
+use serde::{Deserialize, Serialize};
 use std::env;
-use serde::{Serialize, Deserialize};
 extern crate confy;
 
 /// A tool for managing your LoRa devices and ChirpStack API
@@ -18,7 +19,7 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Debug,Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Config {
     /// The url of ChirpStack API
     url: String,
@@ -26,6 +27,7 @@ struct Config {
     token: String,
     /// The application id of ChirpStack API
     id: String,
+    device_profile_id: String,
 }
 
 impl Default for Config {
@@ -35,42 +37,18 @@ impl Default for Config {
             // a dummy JWT token required by ChirpStack API
             token: "".into(),
             id: "2".into(),
+            device_profile_id: "70298761-1bf9-4a6c-bda1-69a0eb04aaaf".into(),
         }
     }
 }
 
-fn read_config(app_name:String) -> Result<(), confy::ConfyError> {
+fn read_config(app_name: String) -> Result<Config, confy::ConfyError> {
     let cfg: Config = confy::load(&app_name, None)?;
     let file = confy::get_configuration_file_path(&app_name, None)?;
     info!("The configuration file path is: {:#?}", file);
     debug!("The configuration is:");
     debug!("{:#?}", cfg);
-    debug!("The wrote toml file content is:");
-    let mut content = String::new();
-    std::fs::File::open(&file)
-        .expect("Failed to open toml configuration file.")
-        .read_to_string(&mut content)
-        .expect("Failed to read toml configuration file.");
-    debug!("{}", content);
-    let cfg = Config {
-        id: "Test".to_string(),
-        ..cfg
-    };
-    confy::store(&app_name,None, &cfg)?;
-    println!("The updated toml file content is:");
-    let mut content = String::new();
-    std::fs::File::open(&file)
-        .expect("Failed to open toml configuration file.")
-        .read_to_string(&mut content)
-        .expect("Failed to read toml configuration file.");
-    println!("{}", content);
-    let _cfg = Config {
-        id: "Test".to_string(),
-        ..cfg
-    };
-    std::fs::remove_dir_all(file.parent().unwrap())
-        .expect("Failed to remove directory");
-    Ok(())
+    Ok(cfg)
 }
 
 #[derive(Subcommand)]
@@ -93,15 +71,6 @@ enum Commands {
     /// Send request to ChirpStack API
     #[clap(setting(AppSettings::ArgRequiredElseHelp))]
     Api {
-        /// The url of ChirpStack API
-        #[clap(short, long, default_value = "")]
-        url: String,
-        /// The token of ChirpStack API
-        #[clap(short, long, default_value = "")]
-        token: String,
-        /// The application id of ChirpStack API
-        #[clap(short, long, default_value = "")]
-        id: String,
         #[clap(subcommand)]
         command: ApiCommands,
     },
@@ -153,7 +122,8 @@ fn main() {
     builder.target(Target::Stdout);
     builder.init();
     let args = Cli::parse();
-    read_config("laser-utils".to_string());
+    let app_name = "laser-utils";
+    let cfg = read_config(app_name.to_string()).expect("Couldn't read config file");
 
     match &args.command {
         Commands::Ls => {
@@ -204,13 +174,44 @@ fn main() {
                 },
             }
         }
-        Commands::Api {
-            url,
-            token,
-            id,
-            command,
-        } => {
-
+        Commands::Api { command } => {
+            if cfg.url.trim().is_empty() {
+                let file = confy::get_configuration_file_path(app_name, None).unwrap();
+                error!("The url is invalid. Please check the configuration file path at: {:#?}", file);
+                panic!("The url token is invalid.");
+            }
+            if cfg.token.trim().is_empty() {
+                let file = confy::get_configuration_file_path(app_name, None).unwrap();
+                error!("The JWT token is invalid. Please check the configuration file path at: {:#?}", file);
+                panic!("The JWT token is invalid.");
+            }
+            match command {
+                ApiCommands::Post => {
+                    // let client = Client::new(&cfg.url, &cfg.token, &cfg.id).unwrap();
+                    // let device_profile_id = cfg.device_profile_id.clone();
+                    // let dev_eui = utils::gen_hex::get_rand_dev_eui();
+                    // let app_key = utils::gen_hex::get_rand_app_key();
+                    // let device = Device {
+                    //     dev_eui: dev_eui.clone(),
+                    //     app_key: app_key.clone(),
+                    //     device_profile_id: device_profile_id.clone(),
+                    // };
+                    // let res = client.post_device(&device);
+                    // info!("{:#?}", res);
+                }
+                ApiCommands::Get => {
+                    let msg = get_device(&cfg).expect("Failed to get device");
+                    info!("{}", serde_json::to_string_pretty(&msg).unwrap());
+                }
+            }
         }
     }
+}
+
+fn get_device(cfg: &Config) -> Result<serde_json::Value, ureq::Error> {
+    let msg:serde_json::Value = ureq::get(&format!("{}/devices", cfg.url))
+        .set("Authorization", &format!("Bearer {}", cfg.token))
+        .call()?
+        .into_json()?;
+    Ok(msg)
 }

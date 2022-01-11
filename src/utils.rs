@@ -1,5 +1,7 @@
 pub mod gen_hex;
 
+// Maybe I don't need this
+// {:#?} format string can do the same thing, maybe
 pub fn escape_string(str: String) -> String {
     let mut escaped_str = String::new();
     for c in str.chars() {

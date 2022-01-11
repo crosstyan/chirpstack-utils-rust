@@ -42,8 +42,8 @@ fn verify_hex_str(str: String, bits: u8) -> bool {
       return false;
     }
   }
-  let len = bits/4;
-  if str.len() != len.into() {
+  let len = usize::from(bits/4);
+  if str.len() != len {
     return false;
   }
   return true;
