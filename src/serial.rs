@@ -4,6 +4,7 @@ use log::debug;
 use log::info;
 use serialport::{SerialPort};
 use crate::utils::{escape_string};
+pub mod at;
 
 
 fn send_read(mut serial: Box<dyn SerialPort>, command: &str) -> String {
