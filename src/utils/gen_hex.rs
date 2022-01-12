@@ -8,7 +8,7 @@ fn get_rand_half_octet() -> u8 {
 }
 
 fn get_rand_half_octet_hex() -> String {
-    let mut r = get_rand_half_octet();
+    let r = get_rand_half_octet();
     format!("{:X}", r)
 }
 
@@ -36,6 +36,7 @@ fn allow_char (c: char) -> bool {
     };
 }
 
+/// Check the string is a valid hex string.
 fn verify_hex_str(str: String, bits: u8) -> bool {
   for char in str.chars() {
     if !allow_char(char) {
@@ -49,10 +50,12 @@ fn verify_hex_str(str: String, bits: u8) -> bool {
   return true;
 }
 
+/// Check the string is a valid hex AppKey
 pub fn verify_app_key(str: String) -> bool {
   verify_hex_str(str, 128)
 }
 
+/// Check the string is a valid hex DevEUI
 pub fn verify_dev_eui(str: String) -> bool {
   verify_hex_str(str, 64)
 }

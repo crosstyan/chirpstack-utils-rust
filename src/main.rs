@@ -41,7 +41,8 @@ enum Commands {
         #[clap(subcommand)]
         command: serial::at::AtCommands,
     },
-    /// Send request to ChirpStack API
+    /// Send request to ChirpStack API. The infomation of API will be read from config file.
+    /// Please make sure the config file is correctly set.
     #[clap(setting(AppSettings::ArgRequiredElseHelp))]
     Api {
         #[clap(subcommand)]
