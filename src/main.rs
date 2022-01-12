@@ -84,7 +84,7 @@ fn main() {
     builder.target(Target::Stdout);
     builder.init();
     let args = Cli::parse();
-    let app_name = "laser-utils";
+    let app_name = "chirpstack-utils";
     let cfg = read_config(app_name.to_string());
     let cfg = match cfg {
         Ok(cfg) => cfg,

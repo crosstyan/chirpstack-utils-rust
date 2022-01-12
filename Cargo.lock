@@ -92,6 +92,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "chirpstack-utils-rust"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "confy",
+ "env_logger",
+ "log",
+ "rand",
+ "serde",
+ "serialport",
+ "ureq",
+]
+
+[[package]]
 name = "chunked_transfer"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -274,20 +288,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cc9ffccd38c451a86bf13657df244e9c3f37493cce8e5e21e940963777acc84"
 dependencies = [
  "wasm-bindgen",
-]
-
-[[package]]
-name = "laser-utils-rust"
-version = "0.1.0"
-dependencies = [
- "clap",
- "confy",
- "env_logger",
- "log",
- "rand",
- "serde",
- "serialport",
- "ureq",
 ]
 
 [[package]]
