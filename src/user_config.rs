@@ -9,7 +9,7 @@ pub struct Config {
     /// The token of ChirpStack API
     pub token: String,
     /// The application id of ChirpStack API
-    pub id: String,
+    pub application_id: String,
     pub device_profile_id: String,
 }
 
@@ -19,7 +19,7 @@ impl Default for Config {
             url: "http://localhost:8080".into(),
             // a dummy JWT token required by ChirpStack API
             token: "".into(),
-            id: "2".into(),
+            application_id: "2".into(),
             device_profile_id: "70298761-1bf9-4a6c-bda1-69a0eb04aaaf".into(),
         }
     }

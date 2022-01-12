@@ -61,7 +61,15 @@ fn main() {
     builder.init();
     let args = Cli::parse();
     let app_name = "laser-utils";
-    let cfg = read_config(app_name.to_string()).expect("Couldn't read config file");
+    let cfg = read_config(app_name.to_string());
+    let cfg= match cfg {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            let file = confy::get_configuration_file_path(&app_name, None).unwrap();
+            error!("Parse Config Error: Please check your configuration file at {:#?}", file);
+            panic!("{}", e)
+        },
+    };
 
     match &args.command {
         Commands::Ls => {
