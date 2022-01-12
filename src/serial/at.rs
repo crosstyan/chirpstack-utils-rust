@@ -34,7 +34,7 @@ pub enum SetCommands {
 
 pub fn handle_at_commands(path: &String, baud: &u32, command: &AtCommands) {
     let serial = serialport::new(path, *baud)
-        .timeout(Duration::new(5, 0))
+        .timeout(Duration::new(15, 0))// give a longer timeout for the command
         .open()
         .expect("Failed to open serial port");
     match &command {

@@ -16,7 +16,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Config {
         Config {
-            url: "http://localhost:8080".into(),
+            url: "http://localhost:8080/api".into(),
             // a dummy JWT token required by ChirpStack API
             token: "".into(),
             application_id: "2".into(),

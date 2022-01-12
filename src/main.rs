@@ -68,7 +68,7 @@ enum Commands {
         /// Set the app key (128 bit hex). if not set, the app key will be generated randomly.
         #[clap(long, default_value = "")]
         app_key: String,
-    }, // TODO: Config
+    }, // TODO: Write config file by subcommand
        // /// A convenient way to set config file
        // #[clap(setting(AppSettings::ArgRequiredElseHelp))]
        // Config
