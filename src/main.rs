@@ -127,9 +127,9 @@ fn main() {
                 serial
             }
             let device = chirpstack::LoraDevice::new(&cfg, app_key, dev_eui, description, name);
-            serial::at_dev_eui(serial_builder(path, *baud), dev_eui);
+            serial::at_dev_eui(serial_builder(path, *baud), &device.dev_eui);
             // open a new serial port to avoid ownership problem
-            serial::at_app_key(serial_builder(path, *baud), app_key);
+            serial::at_app_key(serial_builder(path, *baud), &device.app_key);
             info!("The device is configured successfully, maybe");
             chirpstack::handle_post_device(&cfg, &device);
             info!("The info has been updated successfully, maybe");

@@ -41,6 +41,6 @@ pub fn at_dev_eui(serial: Box<dyn SerialPort>, dev_eui: &str){
 /// This function won't check the AppKey. 
 /// Use with caution.
 pub fn at_app_key(serial: Box<dyn SerialPort>, app_key: &str){
-  let w_buf = format!("at+set_config=lora:dev_eui:{}\r\n", app_key);
+  let w_buf = format!("at+set_config=lora:app_key:{}\r\n", app_key);
   send_read(serial, &w_buf);
 }
