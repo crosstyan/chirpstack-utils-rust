@@ -30,5 +30,19 @@ pub fn read_config(app_name: String) -> Result<Config, confy::ConfyError> {
     let file = confy::get_configuration_file_path(&app_name, None)?;
     info!("The configuration file path is: {:#?}", file);
     debug!("The configuration is:\n{:#?}", cfg);
+    if cfg.url.trim().is_empty() {
+        error!(
+            "The url is invalid. Please check the configuration file path at: {:#?}",
+            file
+        );
+        panic!("The url token is invalid.");
+    }
+    if cfg.token.trim().is_empty() {
+        error!(
+            "The JWT token is invalid. Please check the configuration file path at: {:#?}",
+            file
+        );
+        panic!("The JWT token is invalid.");
+    }
     Ok(cfg)
 }

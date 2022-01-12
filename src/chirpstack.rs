@@ -5,6 +5,7 @@ use crate::utils::gen_hex::{
 };
 use clap::{AppSettings, Parser, Subcommand};
 use log::{debug, error, info, log_enabled, warn, Level};
+use serde::__private::de;
 use serde::{Deserialize, Serialize};
 use ureq::json;
 
@@ -34,44 +35,65 @@ pub enum ApiCommands {
 /// LoraDevice Structure representing a LoRa device
 /// Used for ChirpStack API post body
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct LoraDevice {
+pub struct LoraDevice {
     // https://serde.rs/field-attrs.html
     #[serde(rename = "devEUI")]
-    dev_eui: String,
+    pub dev_eui: String,
     ///AppKey
     #[serde(rename = "appKey", skip_serializing_if = "String::is_empty")]
-    app_key: String,
+    pub app_key: String,
     #[serde(rename = "applicationID")]
-    application_id: String,
-    description: String,
+    pub application_id: String,
+    pub description: String,
     #[serde(rename = "deviceProfileID")]
-    device_profile_id: String,
+    pub device_profile_id: String,
     #[serde(rename = "isDisabled")]
-    is_disabled: bool,
+    pub is_disabled: bool,
     #[serde(rename = "skipFCntCheck")]
-    skip_fcnt_check: bool,
-    name: String,
+    pub skip_fcnt_check: bool,
+    pub name: String,
     #[serde(rename = "referenceAltitude")]
-    reference_altitude: i32,
+    pub reference_altitude: i32,
 }
 
-pub fn handle_chirpstack_api(cfg: &Config, app_name: &str, command: &ApiCommands) {
-    if cfg.url.trim().is_empty() {
-        let file = confy::get_configuration_file_path(app_name, None).unwrap();
-        error!(
-            "The url is invalid. Please check the configuration file path at: {:#?}",
-            file
-        );
-        panic!("The url token is invalid.");
+impl LoraDevice {
+    pub fn new(
+        cfg: &Config,
+        app_key: &str,
+        dev_eui: &str,
+        description: &str,
+        name: &str,
+    ) -> LoraDevice {
+        LoraDevice {
+            dev_eui: if dev_eui.is_empty() || !verify_dev_eui(dev_eui.to_string()) {
+                warn!("The DevEUI is invalid. It will be generated randomly.");
+                get_rand_dev_eui()
+            } else {
+                dev_eui.into()
+            },
+            app_key: if app_key.is_empty() || !verify_app_key(app_key.to_string()) {
+                warn!("The app key is invalid. It will be generated randomly.");
+                get_rand_app_key().into()
+            } else {
+                app_key.into()
+            },
+            description: description.into(),
+            application_id: cfg.application_id.clone().into(),
+            device_profile_id: cfg.device_profile_id.clone().into(),
+            is_disabled: false,
+            skip_fcnt_check: false,
+            name: if name.is_empty() {
+                warn!("The device name is not specified. It will be generated randomly.");
+                get_rand_hex_str(24)
+            } else {
+                name.to_string()
+            },
+            reference_altitude: 0,
+        }
     }
-    if cfg.token.trim().is_empty() {
-        let file = confy::get_configuration_file_path(app_name, None).unwrap();
-        error!(
-            "The JWT token is invalid. Please check the configuration file path at: {:#?}",
-            file
-        );
-        panic!("The JWT token is invalid.");
-    }
+}
+
+pub fn handle_chirpstack_api(cfg: &Config, command: &ApiCommands) {
     match command {
         ApiCommands::Post {
             name,
@@ -79,7 +101,8 @@ pub fn handle_chirpstack_api(cfg: &Config, app_name: &str, command: &ApiCommands
             dev_eui,
             app_key,
         } => {
-            handle_post_device(cfg, name, description, dev_eui, app_key);
+            let device = LoraDevice::new(cfg, app_key, dev_eui, description, name);
+            handle_post_device(cfg, &device);
         }
         ApiCommands::Get => {
             let msg = get_device(&cfg).expect("Failed to get device");
@@ -95,41 +118,26 @@ fn get_device(cfg: &Config) -> Result<serde_json::Value, ureq::Error> {
         .into_json()?;
     Ok(msg)
 }
-pub fn handle_post_device(cfg: &Config, name: &str, description: &str, dev_eui: &str, app_key: &str) {
-    let device = LoraDevice {
-        dev_eui: if dev_eui.is_empty() || !verify_dev_eui(dev_eui.to_string()) {
-            warn!("The DevEUI is invalid. It will be generated randomly.");
-            get_rand_dev_eui()
-        } else {
-            dev_eui.into()
-        },
-        app_key: if app_key.is_empty() || !verify_app_key(app_key.to_string()) {
-            warn!("The app key is invalid. It will be generated randomly.");
-            get_rand_app_key().into()
-        } else {
-            app_key.into()
-        },
-        description: description.into(),
-        application_id: cfg.application_id.clone().into(),
-        device_profile_id: cfg.device_profile_id.clone().into(),
-        is_disabled: false,
-        skip_fcnt_check: false,
-        name: if name.is_empty() {
-            warn!("The device name is not specified. It will be generated randomly.");
-            get_rand_hex_str(24)
-        } else {
-            name.to_string()
-        },
-        reference_altitude: 0,
-    };
+
+/// Do both post device and set the key of the device
+pub fn handle_post_device(
+    cfg: &Config,
+    device: &LoraDevice
+) {
     info!(
         "Device Info\nDevEUI: {0}\nAppKey: {1}\nName: {2}",
         device.dev_eui, device.app_key, device.name
     );
     let msg = post_device(cfg, &device).unwrap();
-    debug!("Response in post device:\n{}", serde_json::to_string_pretty(&msg).unwrap());
+    debug!(
+        "Response in post device:\n{}",
+        serde_json::to_string_pretty(&msg).unwrap()
+    );
     let msg = post_appkey(cfg, &device).unwrap();
-    debug!("Response in post appkey:\n{}", serde_json::to_string_pretty(&msg).unwrap());
+    debug!(
+        "Response in post appkey:\n{}",
+        serde_json::to_string_pretty(&msg).unwrap()
+    );
 }
 
 fn post_device(cfg: &Config, device: &LoraDevice) -> Result<serde_json::Value, ureq::Error> {
