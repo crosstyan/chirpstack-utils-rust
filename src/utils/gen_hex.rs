@@ -7,6 +7,8 @@ fn get_rand_half_octet() -> u8 {
     r
 }
 
+/// Generate a random octet letter from 0x00 to 0x0F (0 to F)
+/// The captial letter is used default
 fn get_rand_half_octet_hex() -> String {
     let r = get_rand_half_octet();
     format!("{:X}", r)
