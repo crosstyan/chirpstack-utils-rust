@@ -3,7 +3,7 @@ use crate::user_config::Config;
 use crate::utils::gen_hex::{
     get_rand_app_key, get_rand_dev_eui, get_rand_hex_str, verify_app_key, verify_dev_eui,
 };
-use clap::{AppSettings, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use log::{debug, error, info, log_enabled, warn, Level};
 use serde::__private::de;
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,18 @@ pub enum ApiCommands {
         limit: u32,
         /// Number of devices to skip
         #[clap(short, long, default_value_t = 0)]
-        offset:u32
+        offset: u32,
+    },
+    /// Get device profile list from ChirpStack API
+    ///
+    /// Useful when you want to know the device profile ID
+    DeviceProfile {
+        /// Max number of device profiles to get
+        #[clap(short, long, default_value_t = 10)]
+        limit: u32,
+        /// Number of device profiles to skip
+        #[clap(short, long, default_value_t = 0)]
+        offset: u32,
     },
 }
 
@@ -72,13 +83,13 @@ impl LoraDevice {
         name: &str,
     ) -> LoraDevice {
         LoraDevice {
-            dev_eui: if dev_eui.is_empty() || !verify_dev_eui(dev_eui.to_string()) {
+            dev_eui: if dev_eui.is_empty() || !verify_dev_eui(dev_eui) {
                 warn!("The DevEUI is invalid. It will be generated randomly.");
                 get_rand_dev_eui()
             } else {
                 dev_eui.into()
             },
-            app_key: if app_key.is_empty() || !verify_app_key(app_key.to_string()) {
+            app_key: if app_key.is_empty() || !verify_app_key(app_key) {
                 warn!("The app key is invalid. It will be generated randomly.");
                 get_rand_app_key().into()
             } else {
@@ -111,8 +122,13 @@ pub fn handle_chirpstack_api(cfg: &Config, command: &ApiCommands) {
             let device = LoraDevice::new(cfg, app_key, dev_eui, description, name);
             handle_post_device(cfg, &device);
         }
-        ApiCommands::Get { limit , offset} => {
+        ApiCommands::Get { limit, offset } => {
             let msg = get_device(&cfg, *limit, *offset).expect("Failed to get device");
+            info!("{}", serde_json::to_string_pretty(&msg).unwrap());
+        }
+        ApiCommands::DeviceProfile { limit, offset } => {
+            let msg =
+                get_device_profiles(&cfg, *limit, *offset).expect("Failed to get device profile");
             info!("{}", serde_json::to_string_pretty(&msg).unwrap());
         }
     }
@@ -120,6 +136,21 @@ pub fn handle_chirpstack_api(cfg: &Config, command: &ApiCommands) {
 
 fn get_device(cfg: &Config, limit: u32, offset: u32) -> Result<serde_json::Value, ureq::Error> {
     let msg: serde_json::Value = ureq::get(&format!("{}/devices", cfg.url))
+        .set("Authorization", &format!("Bearer {}", cfg.token))
+        .query("applicationID", &cfg.application_id.clone())
+        .query("limit", &limit.to_string())
+        .query("offset", &offset.to_string())
+        .call()?
+        .into_json()?;
+    Ok(msg)
+}
+
+fn get_device_profiles(
+    cfg: &Config,
+    limit: u32,
+    offset: u32,
+) -> Result<serde_json::Value, ureq::Error> {
+    let msg: serde_json::Value = ureq::get(&format!("{}/device-profiles", cfg.url))
         .set("Authorization", &format!("Bearer {}", cfg.token))
         .query("applicationID", &cfg.application_id.clone())
         .query("limit", &limit.to_string())
@@ -169,10 +200,11 @@ fn post_appkey(cfg: &Config, device: &LoraDevice) -> Result<serde_json::Value, u
             "devEUI": device.dev_eui
     }});
     debug!("POST:\n{}", serde_json::to_string_pretty(&request).unwrap());
-    let msg: serde_json::Value = ureq::post(&format!("{0}/devices/{1}/keys", cfg.url, device.dev_eui))
-        .set("Authorization", &format!("Bearer {}", cfg.token))
-        .query("applicationID", &cfg.application_id.clone())
-        .send_json(request)?
-        .into_json()?;
+    let msg: serde_json::Value =
+        ureq::post(&format!("{0}/devices/{1}/keys", cfg.url, device.dev_eui))
+            .set("Authorization", &format!("Bearer {}", cfg.token))
+            .query("applicationID", &cfg.application_id.clone())
+            .send_json(request)?
+            .into_json()?;
     Ok(msg)
 }

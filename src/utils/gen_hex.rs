@@ -16,7 +16,7 @@ fn get_rand_half_octet_hex() -> String {
 
 pub fn get_rand_hex_str(bits: u8) -> String {
     let mut r = String::new();
-    let half_octet = bits/4;
+    let half_octet = bits / 4;
     for _ in 0..half_octet {
         r.push_str(&get_rand_half_octet_hex());
     }
@@ -24,40 +24,61 @@ pub fn get_rand_hex_str(bits: u8) -> String {
 }
 
 pub fn get_rand_dev_eui() -> String {
-  get_rand_hex_str(64)
+    get_rand_hex_str(64)
 }
 
 pub fn get_rand_app_key() -> String {
-  get_rand_hex_str(128)
+    get_rand_hex_str(128)
 }
 
-fn allow_char (c: char) -> bool {
+fn allow_char(c: char) -> bool {
     match c {
         '0'..='9' | 'a'..='f' | 'A'..='F' => return true,
         _ => return false,
     };
 }
 
-/// Check the string is a valid hex string.
-fn verify_hex_str(str: String, bits: u8) -> bool {
-  for char in str.chars() {
-    if !allow_char(char) {
-      return false;
+pub fn is_hex<T>(str:&T) -> bool
+where
+    T: AsRef<str> + ?Sized,
+{
+    for char in str.as_ref().chars() {
+        if !allow_char(char) {
+            return false;
+        }
     }
-  }
-  let len = usize::from(bits/4);
-  if str.len() != len {
-    return false;
-  }
-  return true;
+    return true;
+}
+
+/// Check the string is a valid hex string.
+fn verify_hex_str<T>(str: &T, bits: u8) -> bool
+where
+    T: AsRef<str> + ?Sized,
+{
+    for char in str.as_ref().chars() {
+        if !allow_char(char) {
+            return false;
+        }
+    }
+    let len = usize::from(bits / 4);
+    if str.as_ref().len() != len {
+        return false;
+    }
+    return true;
 }
 
 /// Check the string is a valid hex AppKey
-pub fn verify_app_key(str: String) -> bool {
-  verify_hex_str(str, 128)
+pub fn verify_app_key<T>(str: &T) -> bool
+where
+    T: AsRef<str> + ?Sized,
+{
+    verify_hex_str(str, 128)
 }
 
 /// Check the string is a valid hex DevEUI
-pub fn verify_dev_eui(str: String) -> bool {
-  verify_hex_str(str, 64)
+pub fn verify_dev_eui<T>(str: &T) -> bool
+where
+    T: AsRef<str> + ?Sized,
+{
+    verify_hex_str(str, 64)
 }

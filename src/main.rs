@@ -1,4 +1,4 @@
-use clap::{AppSettings, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use env_logger::{Builder, Target};
 use log::{debug, error, info, log_enabled, warn, Level};
 use serialport;
@@ -29,7 +29,6 @@ enum Commands {
     // No need params
     Ls,
     /// Send at command to serial ports
-    #[clap(setting(AppSettings::ArgRequiredElseHelp))]
     At {
         /// The path of serial port
         #[clap(short, long)]
@@ -42,7 +41,6 @@ enum Commands {
     },
     /// Send request to ChirpStack API. The infomation of API will be read from config file.
     /// Please make sure the config file is correctly set.
-    #[clap(setting(AppSettings::ArgRequiredElseHelp))]
     Api {
         #[clap(subcommand)]
         command: chirpstack::ApiCommands,

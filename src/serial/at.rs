@@ -1,6 +1,8 @@
 use crate::serial;
 use crate::utils;
-use clap::{AppSettings, Parser, Subcommand};
+use crate::utils::gen_hex::is_hex;
+use clap::arg;
+use clap::{Parser, Subcommand};
 use log::{debug, error, info, log_enabled, warn, Level};
 use std::{io::Read, time::Duration};
 
@@ -8,7 +10,6 @@ use std::{io::Read, time::Duration};
 pub enum AtCommands {
     /// Send a `at+version` to check the software version of device
     Version,
-    #[clap(setting(AppSettings::ArgRequiredElseHelp))]
     /// Set the device property by at command
     Set {
         #[clap(subcommand)]
@@ -16,6 +17,13 @@ pub enum AtCommands {
     },
     /// Send a `at+join` to make the device join the local Lora network
     Join,
+    Send {
+        msg: String,
+        #[arg(long, short, default_value_t = 1)]
+        chn: u8,
+        #[arg(long, action)]
+        raw: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -34,7 +42,7 @@ pub enum SetCommands {
 
 pub fn handle_at_commands(path: &String, baud: &u32, command: &AtCommands) {
     let serial = serialport::new(path, *baud)
-        .timeout(Duration::new(15, 0))// give a longer timeout for the command
+        .timeout(Duration::new(15, 0)) // give a longer timeout for the command
         .open()
         .expect("Failed to open serial port");
     match &command {
@@ -48,7 +56,7 @@ pub fn handle_at_commands(path: &String, baud: &u32, command: &AtCommands) {
         }
         AtCommands::Set { command } => match command {
             SetCommands::DevEui { dev_eui } => {
-                if utils::gen_hex::verify_dev_eui(dev_eui.clone()) {
+                if utils::gen_hex::verify_dev_eui(dev_eui) {
                     serial::at_dev_eui(serial, dev_eui);
                 } else {
                     warn!("Invalid DevEUI or DevEUI is not provided. Auto-generated DevEUI will be used.");
@@ -58,7 +66,7 @@ pub fn handle_at_commands(path: &String, baud: &u32, command: &AtCommands) {
                 }
             }
             SetCommands::AppKey { app_key } => {
-                if utils::gen_hex::verify_app_key(app_key.clone()) {
+                if utils::gen_hex::verify_app_key(app_key) {
                     serial::at_app_key(serial, app_key);
                 } else {
                     warn!("Invalid AppKey or AppKey is not provided. Auto-generated AppKey will be used.");
@@ -68,5 +76,15 @@ pub fn handle_at_commands(path: &String, baud: &u32, command: &AtCommands) {
                 }
             }
         },
+        AtCommands::Send { msg, chn, raw } => {
+            if *raw {
+                if !is_hex(msg) {
+                    warn!("The message is not in hex format!");
+                }
+                serial::at_send_raw(serial, *chn, msg);
+            } else {
+                serial::at_send_msg(serial, *chn, msg);
+            }
+        }
     }
 }
